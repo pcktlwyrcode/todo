@@ -1,24 +1,41 @@
-use serde_json::value::Value;
-use serde_json::Map;
+use crate::diesel;
+use diesel::prelude::*;
+
 use actix_web::HttpRequest;
-use crate::to_do;
-use crate::state::read_file;
-use crate::processes::process_input;
-/// 1 Load the current state of the to do item list. ie JSON file
-/// 2 Get the title of the new to do item from the URL.
-/// 3 Pass the title and the pending string through to_do_factory. remember what expect does?
-/// 4 Pass the result of the previous step, along with the create string and the state, into the process module interface.
-/// 5 Return a string to the user to signal that the process has finished.
+use actix_web::Responder;
+
+use crate::database::establish_connection;
+use crate::models::item::new_item::NewItem;
+use crate::models::item::item::Item;
+use crate::schema::to_do;
+use super::utils::return_state;
 
 
-pub async fn create(req: HttpRequest) -> String {
-    let state: Map<String, Value> = read_file(String::from(
-        "./state.json")); // 1
+/// This view creates a to do item and saves it in the state.json file? DB?
+///
+/// # Arguments
+/// * req (HttpRequest): the HTTP request passed into the view
+///
+/// # Returns
+/// * (impl Responder): message to be sent back to the user
+pub async fn create(req: HttpRequest) -> impl Responder {
     let title: String = req.match_info().get("title"
     ).unwrap().to_string();
-    let title_reference: String = title.clone(); // 2
-    let item = to_do::to_do_factory(&String::from("pending"), 
-                title).expect("create "); // 3
-    process_input(item, "create".to_string(), &state); // 4
-    return format!("{} created", title_reference) // 5
+    let title_ref: String = req.match_info().get("title"
+    ).unwrap().to_string();
+
+    let connection = establish_connection();
+    let items = to_do::table
+        .filter(to_do::columns::title.eq(title_ref.as_str()))
+        .order(to_do::columns::id.asc())
+        .load::<Item>(&connection)
+        .unwrap();
+
+    if items.len() == 0 {
+        let new_post = NewItem::new(title,1);
+        let _ = diesel::insert_into(to_do::table).values(&new_post)
+            .execute(&connection);
+    }
+
+    return return_state()
 }
