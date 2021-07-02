@@ -63,7 +63,7 @@ function apiCall(url, method) {
             }
         }
     });
-    xhr.open(method, url);
+    xhr.open(method, "/api/v1" + url);
     xhr.setRequestHeader('content-type', 'application/json');
     xhr.setRequestHeader('user-token', localStorage.getItem("user-token"));
     return xhr
@@ -103,7 +103,6 @@ function getItems() {
   call.send()
 }
 
-getItems()
 
 document.getElementById('create-button').addEventListener('click', createItem)
 

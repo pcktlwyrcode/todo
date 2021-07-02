@@ -1,6 +1,7 @@
 use crate::diesel;
 use diesel::prelude::*;
 use actix_web::{web, HttpResponse};
+use log;
 
 use crate::database::establish_connection;
 use crate::models::user::user::User;
@@ -18,9 +19,11 @@ pub async fn login(credentials: web::Json<Login>) -> HttpResponse {
         .filter(users::columns::username.eq(username.as_str()))
         .load::<User>(&connection).unwrap();
 
+    // 2 problem cases
     if users.len() == 0 {
         return HttpResponse::NotFound().await.unwrap()
     } else if users.len() > 1 {
+          log::error!("multiple users have the username: {}", credentials.username.clone());
         return HttpResponse::Conflict().await.unwrap()
     }
 
